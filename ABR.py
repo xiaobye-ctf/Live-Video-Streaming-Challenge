@@ -2,7 +2,7 @@
 import math
 import ta_py as ta;
 #NN_MODEL = "./submit/results/nn_model_ep_18200.ckpt" # model path settings
-Bitrate = [500.0 * 1024.0 ,850.0 * 1024.0 ,1200.0 * 1024.0, 1850.0 * 1024.0]
+Bitrate = [500.0 * 1000.0 ,850.0 * 1000.0 ,1200.0 * 1000.0, 1850.0 * 1000.0]
 TARGET_BUFFER = [0.5 , 1.0]
 B_min_0 = 0.3
 B_max_0 = 1.0
@@ -54,9 +54,11 @@ class Algorithm:
                  tmp_arr.append(next_B+next_D_cdn)
          if len(tmp_arr) != 0:
              quality = tmp_arr.index(min(tmp_arr))
+             next_Delay = tmp_arr[quality]
          else:
              quality = 0
-         return quality
+             next_Delay = 0
+         return (next_Delay ,quality)
 
 
      def ER(self, R, n ,N = 20):
@@ -106,11 +108,25 @@ class Algorithm:
              Gamma = 1.05
 
          return (target, Gamma)
+     def Frame_Dropping_Control(self,next_quality,next_Delay):
+         frame_time_len = 0.04
+         LATENCY_PENALTY = 0.0
+         if next_Delay <= 1.0:
+             LATENCY_PENALTY = 0.005
+         else:
+             LATENCY_PENALTY = 0.01
+
+         SKIP_PENALTY = 0.5
+         average_delay = next_Delay
+         if next_Delay != 0:
+             next_latency_limit =  (Bitrate[next_quality]/1000.0/1000.0+SKIP_PENALTY)*frame_time_len/(LATENCY_PENALTY*average_delay)
+         else:
+             next_latency_limit = 4
+         return next_latency_limit
 
      def run(self, time, S_time_interval, S_send_data_size, S_chunk_len, S_rebuf, S_buffer_size, S_play_time_len,S_end_delay, S_decision_flag, S_buffer_flag,S_cdn_flag,S_skip_time, end_of_video, cdn_newest_id,download_id,cdn_has_frame,IntialVars):
-
+         bit_rate = 0
          target_buffer,next_Gamma = self.Playback_Rate_Control(S_buffer_size[-1])
-         latency_limit = 4
          if(len(self.R) >= 30 and S_time_interval[-1]!= 0):
              cur_R_hat = self.R_hat[-1]
              self.R.append(S_send_data_size[-1]/S_chunk_len[-1]*(Base_Bitrate/Bitrate[self.cur_Quality]))
@@ -122,24 +138,26 @@ class Algorithm:
           #   self.b = self.b + abs(next_R_hat-self.R[-1])
          #    print(self.a/self.n , self.b/self.n)
              self.R_hat.append(next_R_hat)
-         
 
-             bit_rate = self.Bitrate_Control(
-			                next_R_hat = next_R_hat
-			 		 		,next_Gamma = next_Gamma
-			                ,d = S_chunk_len[-1]
-							,N_nst = cdn_newest_id
-							,prev_N_nst = self.prev_cdn_newest_id
-							,N_dld = download_id
-							,cur_B = S_buffer_size[-1]
-							,data = S_send_data_size
-							,time_interval = S_time_interval
-							)
+             next_Delay,bit_rate = self.Bitrate_Control(
+									next_R_hat = next_R_hat
+									,next_Gamma = next_Gamma
+									,d = S_chunk_len[-1]
+									,N_nst = cdn_newest_id
+									,prev_N_nst = self.prev_cdn_newest_id
+									,N_dld = download_id
+									,cur_B = S_buffer_size[-1]
+									,data = S_send_data_size
+									,time_interval = S_time_interval
+									)
+             latency_limit = self.Frame_Dropping_Control(next_quality=bit_rate,next_Delay=next_Delay)
+
 
          else:
              self.R.append(0.0)
              self.R_hat.append(0.0)
              bit_rate = 0
+             latency_limit = 4
 #         print(bit_rate)
          self.prev_cdn_newest_id = cdn_newest_id
          cur_Quality=bit_rate 
