@@ -117,11 +117,7 @@ class Algorithm:
              LATENCY_PENALTY = 0.01
 
          SKIP_PENALTY = 0.5
-         average_delay = next_Delay
-         if next_Delay != 0:
-             next_latency_limit =  (Bitrate[next_quality]/1000.0/1000.0+SKIP_PENALTY)*frame_time_len/(LATENCY_PENALTY*average_delay)
-         else:
-             next_latency_limit = 4
+         next_latency_limit =  (Bitrate[next_quality]/1000.0/1000.0+SKIP_PENALTY)*frame_time_len/(LATENCY_PENALTY*2)
          return next_latency_limit
 
      def run(self, time, S_time_interval, S_send_data_size, S_chunk_len, S_rebuf, S_buffer_size, S_play_time_len,S_end_delay, S_decision_flag, S_buffer_flag,S_cdn_flag,S_skip_time, end_of_video, cdn_newest_id,download_id,cdn_has_frame,IntialVars):
@@ -150,7 +146,7 @@ class Algorithm:
 									,data = S_send_data_size
 									,time_interval = S_time_interval
 									)
-             latency_limit = self.Frame_Dropping_Control(next_quality=bit_rate,next_Delay=next_Delay)
+             latency_limit = self.Frame_Dropping_Control(next_quality=bit_rate,next_Delay=S_end_delay[-1])
 
 
          else:
