@@ -8,6 +8,11 @@ B_min_0 = 0.3
 B_max_0 = 1.0
 B_min_1 = 0.5
 B_max_1 = 2.0
+Lambda = 4
+t = 40
+l_min = 2
+l_max = 30
+
 Base_Bitrate = Bitrate[0]
 class Algorithm:
      def __init__(self):
@@ -61,15 +66,16 @@ class Algorithm:
          return (next_Delay ,quality)
 
 
-     def ER(self, R, n ,N = 20):
-         sum = 0.0
-         for i in range(N-1):
+     def ER(self, R, n ,N ):
+         s = 0.0
+         for i in range(N):
              #print(sum)
-             sum = sum + abs(float(R[n-i])  - float(R[n-i-1]) )  
-         if sum != 0:
-             ERn = abs(R[n]  - R[n-N] ) / sum
+             s = s + abs(float(R[n-i])  - float(R[n-i-1]) )  
+         if s != 0:
+             ERn = abs(float(R[n])  - float(R[n-N]) ) / s
          else:
              ERn = 0
+         #print("ER",ERn)
          return ERn
 
 
@@ -117,22 +123,24 @@ class Algorithm:
              LATENCY_PENALTY = 0.01
          
          SKIP_PENALTY = 0.5
-         next_latency_limit =  (Bitrate[next_quality]/1000.0/1000.0+SKIP_PENALTY)*frame_time_len/(LATENCY_PENALTY*1.89)
+         next_latency_limit =  (Bitrate[next_quality]/1000.0/1000.0+SKIP_PENALTY)*frame_time_len/(LATENCY_PENALTY*Lambda)
          return next_latency_limit
 
      def run(self, time, S_time_interval, S_send_data_size, S_chunk_len, S_rebuf, S_buffer_size, S_play_time_len,S_end_delay, S_decision_flag, S_buffer_flag,S_cdn_flag,S_skip_time, end_of_video, cdn_newest_id,download_id,cdn_has_frame,IntialVars):
          bit_rate = 0
          target_buffer,next_Gamma = self.Playback_Rate_Control(S_buffer_size[-1])
-         if(len(self.R) >= 30 and S_time_interval[-1]!= 0):
+         if(len(self.R) >= t and S_time_interval[-1]!= 0):
              cur_R_hat = self.R_hat[-1]
              self.R.append(S_send_data_size[-1]/S_chunk_len[-1]*(Base_Bitrate/Bitrate[self.cur_Quality]))
              #print(self.R[-1]/1024/1024,",",time,",",self.R_hat[-1]/1024/1024,",",time)
-             next_R_hat = self.Segment_Bitrate_Predict(cur_R_hat = cur_R_hat, R = self.R,n = 30, l_min = 2,l_max = 30)
-             #next_R_hat = ta.kama(self.R,30,2,30)[-1]
-             #self.n = self.n+1
-           #  self.a = self.a + abs(ta.kama(self.R,30,2,30)[-1]-self.R[-1])
-          #   self.b = self.b + abs(next_R_hat-self.R[-1])
-         #    print(self.a/self.n , self.b/self.n)
+             next_R_hat = self.Segment_Bitrate_Predict(cur_R_hat = cur_R_hat, R = self.R,n = t, l_min = l_min,l_max = l_max)
+             #next_R_hat = ta.kama(self.R,t,l_min,l_max)[-1]
+             self.n = self.n + 1
+             self.a = self.a + (abs(cur_R_hat-self.R[-1]))/self.R[-1]
+         #    print(time)
+             #print(time,self.R[-1],time,cur_R_hat )
+        
+             #print(self.a/self.n)
              self.R_hat.append(next_R_hat)
 
              next_Delay,bit_rate = self.Bitrate_Control(
@@ -154,9 +162,11 @@ class Algorithm:
              self.R_hat.append(0.0)
              bit_rate = 0
              latency_limit = 4
-#         print(bit_rate)
          self.prev_cdn_newest_id = cdn_newest_id
-         cur_Quality=bit_rate 
+         self.cur_Quality=bit_rate 
+         if(end_of_video):
+             bit_rate = 0
+
          return bit_rate, target_buffer, latency_limit
 
 
