@@ -108,16 +108,16 @@ class Algorithm:
              Gamma = 1.05
 
          return (target, Gamma)
-     def Frame_Dropping_Control(self,next_quality,next_Delay):
+     def Frame_Dropping_Control(self,next_quality,Delays):
          frame_time_len = 0.04
          LATENCY_PENALTY = 0.0
-         if next_Delay <= 1.0:
+         if Delays[-1] <= 1.0:
              LATENCY_PENALTY = 0.005
          else:
              LATENCY_PENALTY = 0.01
-
+         
          SKIP_PENALTY = 0.5
-         next_latency_limit =  (Bitrate[next_quality]/1000.0/1000.0+SKIP_PENALTY)*frame_time_len/(LATENCY_PENALTY*2)
+         next_latency_limit =  (Bitrate[next_quality]/1000.0/1000.0+SKIP_PENALTY)*frame_time_len/(LATENCY_PENALTY*1.89)
          return next_latency_limit
 
      def run(self, time, S_time_interval, S_send_data_size, S_chunk_len, S_rebuf, S_buffer_size, S_play_time_len,S_end_delay, S_decision_flag, S_buffer_flag,S_cdn_flag,S_skip_time, end_of_video, cdn_newest_id,download_id,cdn_has_frame,IntialVars):
@@ -146,7 +146,7 @@ class Algorithm:
 									,data = S_send_data_size
 									,time_interval = S_time_interval
 									)
-             latency_limit = self.Frame_Dropping_Control(next_quality=bit_rate,next_Delay=S_end_delay[-1])
+             latency_limit = self.Frame_Dropping_Control(next_quality=bit_rate,Delays=S_end_delay)
 
 
          else:
