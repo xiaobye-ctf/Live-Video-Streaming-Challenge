@@ -8,11 +8,11 @@ B_min_0 = 0.3
 B_max_0 = 1.0
 B_min_1 = 0.5
 B_max_1 = 2.0
-Lambda = 4
-t = 40
+Lambda = 2.5 #2.5
+t = 16 # 16
 l_min = 2
-l_max = 30
-
+l_max = 40 #40
+WMA_len =35
 Base_Bitrate = Bitrate[0]
 class Algorithm:
      def __init__(self):
@@ -47,7 +47,7 @@ class Algorithm:
      def Bitrate_Control(self,next_R_hat,next_Gamma,d,N_nst,prev_N_nst,N_dld,cur_B,data,time_interval):
          tmp_arr = []
          for i in range(len(Bitrate)):
-             next_C = self.WMA_for_C(data[-30:],time_interval[-30:],30)
+             next_C = self.WMA_for_C(data[-30:],time_interval[-30:],WMA_len)
              next_R_hat = next_R_hat*(Bitrate[i]/Base_Bitrate) #Modify bitrate to current indicated quality
              next_T = (next_R_hat * d)/next_C
              next_B = max(cur_B + d - next_Gamma*next_T,0)
